@@ -1,0 +1,49 @@
+name: "Release and Changelog"
+author: "roodolv"
+description: "Automatically generates GitHub Releases and updates CHANGELOG.md when a pull request with specific labels is merged. Additionally, it includes commits with messages that have a specified prefix."
+inputs:
+  github_token:
+    description: "Set the {{ secrets.GITHUB_TOKEN }} here"
+    required: true
+  pr_token:
+    description: "Set a read-only token for pull requests, required when using this action with a private repository."
+    required: false
+  default_branch:
+    description: "Specify the default branch name if it differs from 'main'."
+    required: false
+    default: "main"
+runs:
+  using: "composite"
+  steps:
+    - name: Get semver label
+      id: semver_label
+      shell: bash
+      run: |
+        if ${{ contains(github.event.pull_request.labels.*.name, 'semver-major') }}; then
+          SEMVER_LABEL="major"
+        elif ${{ contains(github.event.pull_request.labels.*.name, 'semver-minor') }}; then
+          SEMVER_LABEL="minor"
+        elif ${{ contains(github.event.pull_request.labels.*.name, 'semver-patch') }}; then
+          SEMVER_LABEL="patch"
+        else
+          echo "Failed to get semver-label"
+          exit 1
+        fi
+
+        echo "semver_label=$SEMVER_LABEL" >> $GITHUB_OUTPUT
+
+    - name: Execute script
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
+        DEFAULT_BRANCH: ${{ inputs.default_branch }}
+        GH_REPO: ${{ github.repository }}
+        GH_SHA: ${{ github.sha }}
+        SEMVER_LABEL: ${{ steps.semver_label.outputs.semver_label }}
+      run: |
+        chmod +x ${{ github.action_path }}/src/main.sh
+        ${{ github.action_path }}/src/main.sh
+branding:
+  icon: "tag"
+  color: "white"
