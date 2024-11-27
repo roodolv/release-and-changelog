@@ -4,6 +4,8 @@
 # GITHUB_TOKEN: ${{ inputs.github_token }}
 # PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
 # DEFAULT_BRANCH: ${{ inputs.default_branch }}
+# JSON_CONFIG="${{ inputs.json_config }}"
+
 # GH_REPO="${{ github.repository }}"
 # GH_SHA="${{ github.sha }}"
 # SEMVER_LABEL="${{ steps.semver_label.outputs.semver_label }}"
@@ -183,15 +185,22 @@ get_commits_between_tags() {
 
 categorize_other_changes() {
   COMMITS=$(get_commits_between_tags)
-  REVERTS=""
-  PERFS=""
-  REFACTOR=""
+  FORMATTED_CHANGES=""
 
-  # Function to extract scope and message
+  # Create arrays for classification and for order
+  declare -A CATEGORY_CHANGES
+  declare -a CATEGORY_ORDER
+
+  # Processes each category in JSON
+  categories_count=$(echo "$JSON_CONFIG" | jq '.categories | length')
+  for ((i=0; i<categories_count; i++)); do
+    title=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].title")
+    CATEGORY_ORDER+=("$title")
+  done
+
   get_scope_and_message() {
     local msg="$1"
     local type="$2"
-
     case "$msg" in
       ${type}\(*\):*)
         local scope=$(echo "$msg" | cut -d'(' -f2 | cut -d')' -f1)
@@ -206,36 +215,29 @@ categorize_other_changes() {
   }
 
   while IFS= read -r commit; do
-    # Skip empty lines
     [ -z "$commit" ] && continue
-
-    # Extract the first line of commit message
     FIRST_LINE=$(echo "$commit" | head -n1)
 
-    # Categorize based on prefix and preserve scope
-    if [[ "$FIRST_LINE" =~ ^revert[\(\:] ]]; then
-      FORMATTED_MSG=$(get_scope_and_message "$FIRST_LINE" "revert")
-      REVERTS="$REVERTS\\n- $FORMATTED_MSG"
-    elif [[ "$FIRST_LINE" =~ ^perf[\(\:] ]]; then
-      FORMATTED_MSG=$(get_scope_and_message "$FIRST_LINE" "perf")
-      PERFS="$PERFS\\n- $FORMATTED_MSG"
-    elif [[ "$FIRST_LINE" =~ ^refactor[\(\:] ]]; then
-      FORMATTED_MSG=$(get_scope_and_message "$FIRST_LINE" "refactor")
-      REFACTOR="$REFACTOR\\n- $FORMATTED_MSG"
-    fi
+    for ((i=0; i<categories_count; i++)); do
+      prefixes=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].prefix[]")
+      title=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].title")
+
+      for prefix in $prefixes; do
+        if [[ "$FIRST_LINE" =~ ^${prefix}[\(\:] ]]; then
+          FORMATTED_MSG=$(get_scope_and_message "$FIRST_LINE" "$prefix")
+          CATEGORY_CHANGES["$title"]="${CATEGORY_CHANGES["$title"]:-}\\n- $FORMATTED_MSG"
+          break
+        fi
+      done
+    done
   done <<< "$COMMITS"
 
-  FORMATTED_CHANGES=""
-
-  if [ ! -z "$REVERTS" ]; then
-    FORMATTED_CHANGES="$FORMATTED_CHANGES\\n### Reverts$REVERTS"
-  fi
-  if [ ! -z "$PERFS" ]; then
-    FORMATTED_CHANGES="$FORMATTED_CHANGES\\n### Performance$PERFS"
-  fi
-  if [ ! -z "$REFACTOR" ]; then
-    FORMATTED_CHANGES="$FORMATTED_CHANGES\\n### Refactor$REFACTOR"
-  fi
+  # Output categories in JSON order
+  for title in "${CATEGORY_ORDER[@]}"; do
+    if [[ -n "${CATEGORY_CHANGES["$title"]}" ]]; then
+      FORMATTED_CHANGES="$FORMATTED_CHANGES\\n### $title${CATEGORY_CHANGES["$title"]}"
+    fi
+  done
 
   echo "$FORMATTED_CHANGES"
 }
@@ -244,17 +246,16 @@ compose_release_note() {
   REPO_URL_ESC="$(echo $REPO_URL | sed 's/\//\\\//g')"
   DATE_TODAY=$(TZ="$TZ" date +'%Y-%m-%d')
 
-  TOP_HEADING="## [v$NEW_VERSION]($REPO_URL/compare/v$CURRENT_VERSION...v$NEW_VERSION) ($DATE_TODAY)\\n"
-  PR_CHANGES=$(generate_pr_changes)
+  TOP_HEADING="## [v$NEW_VERSION]($REPO_URL/compare/v$CURRENT_VERSION...v$NEW_VERSION) ($DATE_TODAY)"
+  PR_CHANGES=$(generate_pr_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
   OTHER_CHANGES=$(categorize_other_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
-
   RELEASE_NOTE_BODY="$(printf '%s%s%s' "$TOP_HEADING$PR_CHANGES$OTHER_CHANGES" | awk ' \
     BEGIN {
       RS="EOF"
     }
     {
-      gsub(/\\n\* /, "\\n- ")           # Unify bullet points
-      gsub(/(\\n){3,}/, "\\n\\n")       # Normalize consecutive line breaks
+      gsub(/\\n\* /, "\\n- ")      # Unify bullet points
+      gsub(/(\\n){3,}/, "\\n\\n")  # Normalize consecutive line breaks
 
       print
     }' \

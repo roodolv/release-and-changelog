@@ -12,6 +12,10 @@ inputs:
     description: "Specify the default branch name if it differs from 'main'."
     required: false
     default: "main"
+  json_config:
+    description: "Set the JSON field to include a prefix for commit messages and a heading for release notes."
+    required: false
+    default: '{"categories":[{"prefix":["revert"],"title":"Reverts"},{"prefix":["refactor"],"title":"Refactoring"},{"prefix":["perf"],"title":"Performance"}]}'
 runs:
   using: "composite"
   steps:
@@ -38,6 +42,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
         DEFAULT_BRANCH: ${{ inputs.default_branch }}
+        JSON_CONFIG: ${{ inputs.json_config }}
         GH_REPO: ${{ github.repository }}
         GH_SHA: ${{ github.sha }}
         SEMVER_LABEL: ${{ steps.semver_label.outputs.semver_label }}
