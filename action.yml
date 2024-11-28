@@ -1,6 +1,6 @@
 name: "Release and Changelog"
 author: "roodolv"
-description: "Automatically generates GitHub Releases and updates CHANGELOG.md when a pull request with specific labels is merged."
+description: "Automatically generates Releases and updates CHANGELOG when a PR with specific labels is merged."
 inputs:
   github_token:
     description: "Set the {{ secrets.GITHUB_TOKEN }} here"
