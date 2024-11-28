@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.2.0](https://github.com/roodolv/release-and-changelog/compare/v1...v1.2.0) (2024-11-28)
+
+### Features
+- **metadata**: added JSON customization feature ([#1](https://github.com/roodolv/release-and-changelog/pull/1))
+
+- **metadata**: @roodolv made their first contribution in https://github.com/roodolv/release-and-changelog/pull/1
+
 ## [v1.0.0](https://github.com/roodolv/release-and-changelog/tree/v1.0.0) (2024-11-26)
 
 Initial release
