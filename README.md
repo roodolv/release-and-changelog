@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: roodolv/release-and-changelog@v1.0
+      - uses: roodolv/release-and-changelog@v1.1
         env:
           TZ: "Asia/Tokyo"
         with:
