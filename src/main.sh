@@ -26,7 +26,7 @@ REPO_URL="https://github.com/$GH_REPO"
 ##################################################
 get_current_version() {
   git fetch --tags --force
-  VERSION=$(git describe --tags --abbrev=0 2>/dev/null)
+  VERSION=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
   VERSION=${VERSION#v}
   : ${VERSION:=0.0.0}
 
