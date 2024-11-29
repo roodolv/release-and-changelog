@@ -15,6 +15,7 @@ GitHub Actions for Automated Versioning
 ## Usage
 > **NOTE**: This action should be used with [automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes). It needs `.github/release.yml` on your repository.
 
+> **HINT**: You can create the necessary labels using `setup_labels.sh`.
 
 If your repository is **public**:
 ```yaml
