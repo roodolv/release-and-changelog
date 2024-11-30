@@ -4,12 +4,12 @@ GitHub Actions for Automated Versioning
 
 ## Features
 - Automatically generates release notes and updates `CHANGELOG.md` if a merged PR has a `semver-XX` label.
-- Generates the body of the release notes based on merged PRs and commits between the current SHA (e.g., `${{ github.sha }}`) and the previous tag's SHA.
-  - Non-semver tags (e.g. `v1.2.3-alpha`, `v0.1.2-beta.1`, `v3.4.5pre`, `v1`, `v0.2`, `5.1.0` etc) are **all skipped**.
 - Calculates and creates a new version tag following [Semantic Versioning](https://semver.org).
-- Detects commit messages with the specified `prefix` and includes them in sections defined by `title` in the release notes and CHANGELOG.md.
+  - Abbreviated, prerelease, and other special kind of tags (e.g. `v1`, `v0.2`, `v3.4.5pre`, `v1.2.3-alpha`, `v0.1.2-beta.1`, and `release-0.1.0` etc) are **all ignored for now**.
+- Generates the release notes with [automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes), and **detected commits**.
+  - Detects commit messages with the specified `prefix` and includes them in sections of `title` in the release notes and CHANGELOG.md.
   - The `prefix` and `title` can be customized using a JSON field.
-- Retrieves scopes from PRs and commits.
+- Retrieves **scopes** from PRs and commits.
     - Supports the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format.
 
 ## Usage
