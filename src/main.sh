@@ -47,6 +47,11 @@ calc_new_version() {
   else
     NEW_VERSION=$CURRENT_VERSION
   fi
+
+  # Replace "0.0.0" with the SHA of the initial commit
+  if [ "$CURRENT_VERSION" = "0.0.0" ] ; then
+    CURRENT_VERSION="$(git rev-list --max-parents=0 HEAD | cut -c 1-7)"
+  fi
 }
 
 # This step requires `.github/release.yml`
