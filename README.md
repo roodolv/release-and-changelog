@@ -37,7 +37,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: roodolv/release-and-changelog@v1.1
+      - uses: roodolv/release-and-changelog@v1
         env:
           TZ: "Asia/Tokyo"
         with:
@@ -82,7 +82,7 @@ Add this to execute the action only when a merged PR contains `semver-XX` labels
 
 You can specify `prefix` for commit messages and `title` for release notes freely, with `json_config` variable.
 ```yaml
-      - uses: roodolv/release-and-changelog@v1.1
+      - uses: roodolv/release-and-changelog@v1
         env:
           TZ: "Asia/Tokyo"
         with:
