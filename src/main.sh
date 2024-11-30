@@ -4,6 +4,7 @@
 # GITHUB_TOKEN: ${{ inputs.github_token }}
 # PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
 # DEFAULT_BRANCH: ${{ inputs.default_branch }}
+# TAG_PREFIX="${{ inputs.tag_prefix }}"
 # JSON_CONFIG="${{ inputs.json_config }}"
 
 # GH_REPO="${{ github.repository }}"
@@ -17,6 +18,7 @@
 CURRENT_VERSION=""
 NEW_VERSION=""
 RELEASE_NOTE_BODY=""
+PREV_TAG_SHA=""
 
 REPO_API="https://api.github.com/repos/$GH_REPO"
 REPO_URL="https://github.com/$GH_REPO"
@@ -26,7 +28,7 @@ REPO_URL="https://github.com/$GH_REPO"
 ##################################################
 get_current_version() {
   git fetch --tags --force
-  VERSION=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+  VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
   VERSION=${VERSION#v}
   : ${VERSION:=0.0.0}
 
@@ -38,19 +40,31 @@ calc_new_version() {
   MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
   PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
 
-  if [ "$SEMVER_LABEL" = 'major' ] ; then
+  if [ "$SEMVER_LABEL" = 'major' ]; then
     NEW_VERSION="$((MAJOR + 1)).0.0"
-  elif [ "$SEMVER_LABEL" = 'minor' ] ; then
+  elif [ "$SEMVER_LABEL" = 'minor' ]; then
     NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
-  elif [ "$SEMVER_LABEL" = 'patch' ] ; then
+  elif [ "$SEMVER_LABEL" = 'patch' ]; then
     NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
   else
     NEW_VERSION=$CURRENT_VERSION
   fi
+}
 
-  # Replace "0.0.0" with the SHA of the initial commit
-  if [ "$CURRENT_VERSION" = "0.0.0" ] ; then
-    CURRENT_VERSION="$(git rev-list --max-parents=0 HEAD | cut -c 1-7)"
+# Update tag prefixes and the SHA
+update_tag_and_sha() {
+  NEW_VERSION="${TAG_PREFIX}${NEW_VERSION}"
+
+  if [ "$CURRENT_VERSION" = "0.0.0" ]; then
+    # Replace "0.0.0" with the SHA of the initial commit
+    PREV_TAG_SHA="$(git rev-list --max-parents=0 HEAD)"
+    CURRENT_VERSION="$(echo "$PREV_TAG_SHA" | cut -c 1-7)"
+  else
+    # If it's a semver tag, add a prefix
+    CURRENT_VERSION="${TAG_PREFIX}${CURRENT_VERSION}"
+    PREV_TAG_SHA=$(curl -s -H "Authorization: token $LOCAL_GITHUB_TOKEN" \
+      "$REPO_API/git/refs/tags/$CURRENT_VERSION" \
+      | jq -r '.object.sha')
   fi
 }
 
@@ -147,13 +161,16 @@ generate_pr_changes() {
     fi
   }
 
+  # Check whether the prev tag exists and returns an empty string if not
+  PREV_TAG_NAME=$(echo "$CURRENT_VERSION" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$')
+
   RELEASE_NOTES=$(curl -s -X POST \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: token $GITHUB_TOKEN" \
     "$REPO_API/releases/generate-notes" \
     -d "{
-      \"tag_name\": \"v$NEW_VERSION\",
-      \"previous_tag_name\": \"v$CURRENT_VERSION\",
+      \"tag_name\": \"$NEW_VERSION\",
+      \"previous_tag_name\": \"$PREV_TAG_NAME\",
       \"target_commitish\": \"$DEFAULT_BRANCH\"
     }" | jq -r ".body" | tr -d "\r")
 
@@ -166,11 +183,6 @@ generate_pr_changes() {
 }
 
 get_commits_between_tags() {
-  # Get the previous tag's commit SHA
-  PREV_TAG_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-    "$REPO_API/git/refs/tags/v$CURRENT_VERSION" \
-    | jq -r '.object.sha')
-
   # Get commit messages and SHAs between the previous tag and the current HEAD
   COMMITS_AND_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
     "$REPO_API/compare/$PREV_TAG_SHA...$GH_SHA" \
@@ -251,7 +263,7 @@ compose_release_note() {
   REPO_URL_ESC="$(echo $REPO_URL | sed 's/\//\\\//g')"
   DATE_TODAY=$(TZ="$TZ" date +'%Y-%m-%d')
 
-  TOP_HEADING="## [v$NEW_VERSION]($REPO_URL/compare/v$CURRENT_VERSION...v$NEW_VERSION) ($DATE_TODAY)"
+  TOP_HEADING="## [$NEW_VERSION]($REPO_URL/compare/$CURRENT_VERSION...$NEW_VERSION) ($DATE_TODAY)"
   PR_CHANGES=$(generate_pr_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
   OTHER_CHANGES=$(categorize_other_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
   RELEASE_NOTE_BODY="$(printf '%s%s%s' "$TOP_HEADING$PR_CHANGES$OTHER_CHANGES" | awk ' \
@@ -296,7 +308,7 @@ update_changelog() {
     exit 1
   fi
   git add CHANGELOG.md
-  git commit -m "chore(release): v$NEW_VERSION"
+  git commit -m "chore(release): $NEW_VERSION"
   git push
 }
 
@@ -304,9 +316,9 @@ create_release() {
   response=$(curl -X POST \
     -H "Authorization: token $GITHUB_TOKEN" \
     -d "{ \
-      \"tag_name\": \"v$NEW_VERSION\", \
+      \"tag_name\": \"$NEW_VERSION\", \
       \"target_commitish\": \"$DEFAULT_BRANCH\", \
-      \"name\": \"v$NEW_VERSION\", \
+      \"name\": \"$NEW_VERSION\", \
       \"body\": \"$RELEASE_NOTE_BODY\" \
     }" \
     -w "%{http_code}" \
@@ -325,6 +337,7 @@ create_release() {
 main() {
   get_current_version
   calc_new_version
+  update_tag_and_sha
 
   compose_release_note
 
