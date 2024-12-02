@@ -26,6 +26,13 @@ REPO_URL="https://github.com/$GH_REPO"
 ##################################################
 #                    Functions
 ##################################################
+validate_tag_prefix() {
+  if [ "$TAG_PREFIX" != "v" ] && [ "$TAG_PREFIX" != "" ]; then
+    echo "Error: TAG_PREFIX must be either an empty string or 'v'" >&2
+    exit 1
+  fi
+}
+
 get_current_version() {
   git fetch --tags --force
   VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
@@ -335,6 +342,8 @@ create_release() {
 }
 
 main() {
+  validate_tag_prefix
+
   get_current_version
   calc_new_version
   update_tag_and_sha
