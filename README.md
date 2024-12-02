@@ -68,7 +68,7 @@ Add this to execute the action only when a merged PR contains `semver-XX` labels
 - `github_token`: Token used to access the GitHub API.
 - `pr_token`: Set a **Read-only** token for pull requests here if you are using this action with a private repository.
 - `default_branch`: Set the default branch name here if it's not `main`.
-- `tag_prefix`: Set the prefix of the version tag. If empty (''), the tag '1.2.3' will be detected.
+- `tag_prefix`: Set the prefix of the version tag. If empty (`''`), the tag `1.2.3` will be detected.
 - `json_config`: Set the **JSON field** to include prefixes for commit messages and headings for release notes. (available in `v1.1.0`+)
 
 | name | required | default |

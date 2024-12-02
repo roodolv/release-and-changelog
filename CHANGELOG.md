@@ -3,7 +3,7 @@
 ## [v1.2.0](https://github.com/roodolv/release-and-changelog/compare/v1.1.1...v1.2.0) (2024-12-01)
 
 ### Features
-- **src**: change from version tag to initial SHA ([#6](https://github.com/roodolv/release-and-changelog/pull/6))
+- **src**: replace v0.0.0 with SHA for the initial commit ([#6](https://github.com/roodolv/release-and-changelog/pull/6))
 - **src**: support unprefixed tags (fixed) ([#9](https://github.com/roodolv/release-and-changelog/pull/9))
 
 ## [v1.1.1](https://github.com/roodolv/release-and-changelog/compare/v1.1.0...v1.1.1) (2024-11-29)
