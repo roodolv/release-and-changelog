@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.2.1](https://github.com/roodolv/release-and-changelog/compare/v1.2.0...v1.2.1) (2024-12-03)
+
+### Bug Fixes
+- **src**: validation for TAG_PREFIX ([#10](https://github.com/roodolv/release-and-changelog/pull/10))
+- **src**: stop overwriting CURRENT_VERSION ([#11](https://github.com/roodolv/release-and-changelog/pull/11))
+
 ## [v1.2.0](https://github.com/roodolv/release-and-changelog/compare/v1.1.1...v1.2.0) (2024-12-01)
 
 ### Features
