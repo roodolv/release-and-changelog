@@ -17,8 +17,9 @@
 ##################################################
 CURRENT_VERSION=""
 NEW_VERSION=""
+PREV_TAG=""
+PREV_FULL_SHA=""
 RELEASE_NOTE_BODY=""
-PREV_TAG_SHA=""
 
 REPO_API="https://api.github.com/repos/$GH_REPO"
 REPO_URL="https://github.com/$GH_REPO"
@@ -35,8 +36,8 @@ validate_tag_prefix() {
 
 get_current_version() {
   git fetch --tags --force
-  VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
-  VERSION=${VERSION#v}
+  PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+  VERSION=${PREV_TAG#v}
   : ${VERSION:=0.0.0}
 
   CURRENT_VERSION="$VERSION"
@@ -63,14 +64,12 @@ update_tag_and_sha() {
   NEW_VERSION="${TAG_PREFIX}${NEW_VERSION}"
 
   if [ "$CURRENT_VERSION" = "0.0.0" ]; then
-    # Replace "0.0.0" with the SHA of the initial commit
-    PREV_TAG_SHA="$(git rev-list --max-parents=0 HEAD)"
-    CURRENT_VERSION="$(echo "$PREV_TAG_SHA" | cut -c 1-7)"
+    # Set the SHA of the initial commit to the previous tag
+    PREV_FULL_SHA="$(git rev-list --max-parents=0 HEAD)"
+    PREV_TAG="$(echo "$PREV_FULL_SHA" | cut -c 1-7)"
   else
-    # If it's a semver tag, add a prefix
-    CURRENT_VERSION="${TAG_PREFIX}${CURRENT_VERSION}"
-    PREV_TAG_SHA=$(curl -s -H "Authorization: token $LOCAL_GITHUB_TOKEN" \
-      "$REPO_API/git/refs/tags/$CURRENT_VERSION" \
+    PREV_FULL_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+      "$REPO_API/git/refs/tags/$PREV_TAG" \
       | jq -r '.object.sha')
   fi
 }
@@ -169,7 +168,7 @@ generate_pr_changes() {
   }
 
   # Check whether the prev tag exists and returns an empty string if not
-  PREV_TAG_NAME=$(echo "$CURRENT_VERSION" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$')
+  PREV_TAG_NAME=$(echo "$PREV_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$')
 
   RELEASE_NOTES=$(curl -s -X POST \
     -H "Accept: application/vnd.github+json" \
@@ -192,7 +191,7 @@ generate_pr_changes() {
 get_commits_between_tags() {
   # Get commit messages and SHAs between the previous tag and the current HEAD
   COMMITS_AND_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-    "$REPO_API/compare/$PREV_TAG_SHA...$GH_SHA" \
+    "$REPO_API/compare/$PREV_FULL_SHA...$GH_SHA" \
     | jq -r '.commits[] | .commit.message, .sha')
 
   # Combine a commit message with a SHA
@@ -270,7 +269,7 @@ compose_release_note() {
   REPO_URL_ESC="$(echo $REPO_URL | sed 's/\//\\\//g')"
   DATE_TODAY=$(TZ="$TZ" date +'%Y-%m-%d')
 
-  TOP_HEADING="## [$NEW_VERSION]($REPO_URL/compare/$CURRENT_VERSION...$NEW_VERSION) ($DATE_TODAY)"
+  TOP_HEADING="## [$NEW_VERSION]($REPO_URL/compare/$PREV_TAG...$NEW_VERSION) ($DATE_TODAY)"
   PR_CHANGES=$(generate_pr_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
   OTHER_CHANGES=$(categorize_other_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
   RELEASE_NOTE_BODY="$(printf '%s%s%s' "$TOP_HEADING$PR_CHANGES$OTHER_CHANGES" | awk ' \
