@@ -37,23 +37,23 @@ validate_tag_prefix() {
 get_current_version() {
   git fetch --tags --force
   PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
-  VERSION=${PREV_TAG#v}
-  : ${VERSION:=0.0.0}
+  version=${PREV_TAG#v}
+  : ${version:=0.0.0}
 
-  CURRENT_VERSION="$VERSION"
+  CURRENT_VERSION="$version"
 }
 
 calc_new_version() {
-  MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
-  MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
-  PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+  major=$(echo $CURRENT_VERSION | cut -d. -f1)
+  minor=$(echo $CURRENT_VERSION | cut -d. -f2)
+  patch=$(echo $CURRENT_VERSION | cut -d. -f3)
 
   if [ "$SEMVER_LABEL" = 'major' ]; then
-    NEW_VERSION="$((MAJOR + 1)).0.0"
+    NEW_VERSION="$((major + 1)).0.0"
   elif [ "$SEMVER_LABEL" = 'minor' ]; then
-    NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
+    NEW_VERSION="${major}.$((minor + 1)).0"
   elif [ "$SEMVER_LABEL" = 'patch' ]; then
-    NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+    NEW_VERSION="${major}.${minor}.$((patch + 1))"
   else
     NEW_VERSION=$CURRENT_VERSION
   fi
@@ -168,34 +168,34 @@ generate_pr_changes() {
   }
 
   # Check whether the prev tag exists and returns an empty string if not
-  PREV_TAG_NAME=$(echo "$PREV_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$')
+  prev_tag_name=$(echo "$PREV_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$')
 
-  RELEASE_NOTES=$(curl -s -X POST \
+  release_notes=$(curl -s -X POST \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: token $GITHUB_TOKEN" \
     "$REPO_API/releases/generate-notes" \
     -d "{
       \"tag_name\": \"$NEW_VERSION\",
-      \"previous_tag_name\": \"$PREV_TAG_NAME\",
+      \"previous_tag_name\": \"$prev_tag_name\",
       \"target_commitish\": \"$DEFAULT_BRANCH\"
     }" | jq -r ".body" | tr -d "\r")
 
-  PROCESSED_NOTES=$(echo "$RELEASE_NOTES" | while IFS= read -r line; do
+  processed_notes=$(echo "$release_notes" | while IFS= read -r line; do
     process_line "$line"
   done)
-  PROCESSED_NOTES=${PROCESSED_NOTES%\\n\\n\\n}
+  processed_notes=${processed_notes%\\n\\n\\n}
 
-  echo "$PROCESSED_NOTES"
+  echo "$processed_notes"
 }
 
 get_commits_between_tags() {
   # Get commit messages and SHAs between the previous tag and the current HEAD
-  COMMITS_AND_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+  commits_and_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
     "$REPO_API/compare/$PREV_FULL_SHA...$GH_SHA" \
     | jq -r '.commits[] | .commit.message, .sha')
 
   # Combine a commit message with a SHA
-  RESULTS=$(echo "$COMMITS_AND_SHA" | awk -v repo_url="$REPO_URL" '{
+  results=$(echo "$commits_and_sha" | awk -v repo_url="$REPO_URL" '{
     if (NR % 2 == 1) {
       commit_message = $0
     } else {
@@ -203,22 +203,22 @@ get_commits_between_tags() {
     }
   }')
 
-  echo "$RESULTS"
+  echo "$results"
 }
 
 categorize_other_changes() {
-  COMMITS=$(get_commits_between_tags)
-  FORMATTED_CHANGES=""
+  commits=$(get_commits_between_tags)
+  formatted_changes=""
 
   # Create arrays for classification and for order
-  declare -A CATEGORY_CHANGES
-  declare -a CATEGORY_ORDER
+  declare -A category_changes
+  declare -a category_order
 
   # Processes each category in JSON
   categories_count=$(echo "$JSON_CONFIG" | jq '.categories | length')
   for ((i=0; i<categories_count; i++)); do
     title=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].title")
-    CATEGORY_ORDER+=("$title")
+    category_order+=("$title")
   done
 
   get_scope_and_message() {
@@ -239,40 +239,40 @@ categorize_other_changes() {
 
   while IFS= read -r commit; do
     [ -z "$commit" ] && continue
-    FIRST_LINE=$(echo "$commit" | head -n1)
+    first_line=$(echo "$commit" | head -n1)
 
     for ((i=0; i<categories_count; i++)); do
       prefixes=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].prefix[]")
       title=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].title")
 
       for prefix in $prefixes; do
-        if [[ "$FIRST_LINE" =~ ^${prefix}[\(\:] ]]; then
-          FORMATTED_MSG=$(get_scope_and_message "$FIRST_LINE" "$prefix")
-          CATEGORY_CHANGES["$title"]="${CATEGORY_CHANGES["$title"]:-}\\n- $FORMATTED_MSG"
+        if [[ "$first_line" =~ ^${prefix}[\(\:] ]]; then
+          formatted_msg=$(get_scope_and_message "$first_line" "$prefix")
+          category_changes["$title"]="${category_changes["$title"]:-}\\n- $formatted_msg"
           break
         fi
       done
     done
-  done <<< "$COMMITS"
+  done <<< "$commits"
 
   # Output categories in JSON order
-  for title in "${CATEGORY_ORDER[@]}"; do
-    if [[ -n "${CATEGORY_CHANGES["$title"]}" ]]; then
-      FORMATTED_CHANGES="$FORMATTED_CHANGES\\n### $title${CATEGORY_CHANGES["$title"]}"
+  for title in "${category_order[@]}"; do
+    if [[ -n "${category_changes["$title"]}" ]]; then
+      formatted_changes="$formatted_changes\\n### $title${category_changes["$title"]}"
     fi
   done
 
-  echo "$FORMATTED_CHANGES"
+  echo "$formatted_changes"
 }
 
 compose_release_note() {
-  REPO_URL_ESC="$(echo $REPO_URL | sed 's/\//\\\//g')"
-  DATE_TODAY=$(TZ="$TZ" date +'%Y-%m-%d')
+  repo_url_esc="$(echo $REPO_URL | sed 's/\//\\\//g')"
+  date_today=$(TZ="$TZ" date +'%Y-%m-%d')
 
-  TOP_HEADING="## [$NEW_VERSION]($REPO_URL/compare/$PREV_TAG...$NEW_VERSION) ($DATE_TODAY)"
-  PR_CHANGES=$(generate_pr_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
-  OTHER_CHANGES=$(categorize_other_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
-  RELEASE_NOTE_BODY="$(printf '%s%s%s' "$TOP_HEADING$PR_CHANGES$OTHER_CHANGES" | awk ' \
+  top_heading="## [$NEW_VERSION]($REPO_URL/compare/$PREV_TAG...$NEW_VERSION) ($date_today)"
+  pr_changes=$(generate_pr_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
+  other_changes=$(categorize_other_changes | sed 's/\(#\{3,6\}\) /\\n\1 /g')
+  RELEASE_NOTE_BODY="$(printf '%s%s%s' "$top_heading$pr_changes$other_changes" | awk ' \
     BEGIN {
       RS="EOF"
     }
@@ -283,13 +283,13 @@ compose_release_note() {
       print
     }' \
     | sed 's/ by @[^ ]* in \(https[^\\ \*]*\)/ (\1)/g' \
-    | sed "s/(#\([0-9]\+\))/($REPO_URL_ESC\/pull\/\1)/g" \
-    | sed "s/(\($REPO_URL_ESC\/pull\)\/\([0-9]\+\))/([#\2](\1\/\2))/g" \
+    | sed "s/(#\([0-9]\+\))/($repo_url_esc\/pull\/\1)/g" \
+    | sed "s/(\($repo_url_esc\/pull\)\/\([0-9]\+\))/([#\2](\1\/\2))/g" \
   )"
 }
 
 update_changelog() {
-  CHANGELOG_BODY="$(echo -e $RELEASE_NOTE_BODY)"
+  changelog_body="$(echo -e $RELEASE_NOTE_BODY)"
 
   if [ ! -f CHANGELOG.md ]; then
     echo "# Changelog" > CHANGELOG.md
@@ -298,7 +298,7 @@ update_changelog() {
 
   echo "# Changelog" > temp_changelog.md
   echo "" >> temp_changelog.md
-  echo "$CHANGELOG_BODY" >> temp_changelog.md
+  echo "$changelog_body" >> temp_changelog.md
   echo "" >> temp_changelog.md
 
   if [ -f CHANGELOG.md ]; then
