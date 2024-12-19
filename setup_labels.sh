@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# The action needs these labels
-gh label create semver-major -d "Update MAJOR version with this PR" -c 70090F \
-&& gh label create semver-minor -d "Update MINOR version with this PR" -c 00DD55 \
-&& gh label create semver-patch -d "Update PATCH version with this PR" -c 0000FF
+# The action needs this label
+gh label create release -d "Create release with this label" -c 00DD55
 
 # If necessary, these labels should also be created.
 # gh label create feature -d "New feature etc" -c A2EEEF \
