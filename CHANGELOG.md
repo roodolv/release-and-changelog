@@ -1,5 +1,10 @@
 # Changelog
 
+## [v1.3.0](https://github.com/roodolv/release-and-changelog/compare/v1.2.1...v1.3.0) (2024-12-20)
+
+### Features
+- **metadata**: feat: added automatic semver type detection ([#12](https://github.com/roodolv/release-and-changelog/pull/12))
+
 ## [v1.2.1](https://github.com/roodolv/release-and-changelog/compare/v1.2.0...v1.2.1) (2024-12-03)
 
 ### Bug Fixes
