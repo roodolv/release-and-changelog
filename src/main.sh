@@ -4,13 +4,14 @@
 # GITHUB_TOKEN: ${{ inputs.github_token }}
 # PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
 # DEFAULT_BRANCH: ${{ inputs.default_branch }}
-# TAG_PREFIX="${{ inputs.tag_prefix }}"
-# JSON_CONFIG="${{ inputs.json_config }}"
+# TAG_PREFIX: ${{ inputs.tag_prefix }}
+# CATEGORY_CONFIG: ${{ inputs.category_config }}
 
-# GH_REPO="${{ github.repository }}"
-# GH_SHA="${{ github.sha }}"
-# SEMVER_LABEL="${{ steps.semver_label.outputs.semver_label }}"
-# TZ="$TZ"
+# SEMVER_TYPE: ${{ steps.detect_version.outputs.version }}
+
+# GH_REPO: ${{ github.repository }}
+# GH_SHA: ${{ github.sha }}
+# TZ: $TZ
 
 ##################################################
 #                    Variables
@@ -48,11 +49,11 @@ calc_new_version() {
   minor=$(echo $CURRENT_VERSION | cut -d. -f2)
   patch=$(echo $CURRENT_VERSION | cut -d. -f3)
 
-  if [ "$SEMVER_LABEL" = 'major' ]; then
+  if [ "$SEMVER_TYPE" = 'major' ]; then
     NEW_VERSION="$((major + 1)).0.0"
-  elif [ "$SEMVER_LABEL" = 'minor' ]; then
+  elif [ "$SEMVER_TYPE" = 'minor' ]; then
     NEW_VERSION="${major}.$((minor + 1)).0"
-  elif [ "$SEMVER_LABEL" = 'patch' ]; then
+  elif [ "$SEMVER_TYPE" = 'patch' ]; then
     NEW_VERSION="${major}.${minor}.$((patch + 1))"
   else
     NEW_VERSION=$CURRENT_VERSION
@@ -215,9 +216,9 @@ categorize_other_changes() {
   declare -a category_order
 
   # Processes each category in JSON
-  categories_count=$(echo "$JSON_CONFIG" | jq '.categories | length')
+  categories_count=$(echo "$CATEGORY_CONFIG" | jq '.categories | length')
   for ((i=0; i<categories_count; i++)); do
-    title=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].title")
+    title=$(echo "$CATEGORY_CONFIG" | jq -r ".categories[$i].title")
     category_order+=("$title")
   done
 
@@ -242,8 +243,8 @@ categorize_other_changes() {
     first_line=$(echo "$commit" | head -n1)
 
     for ((i=0; i<categories_count; i++)); do
-      prefixes=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].prefix[]")
-      title=$(echo "$JSON_CONFIG" | jq -r ".categories[$i].title")
+      prefixes=$(echo "$CATEGORY_CONFIG" | jq -r ".categories[$i].prefix[]")
+      title=$(echo "$CATEGORY_CONFIG" | jq -r ".categories[$i].title")
 
       for prefix in $prefixes; do
         if [[ "$first_line" =~ ^${prefix}[\(\:] ]]; then

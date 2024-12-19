@@ -16,41 +16,52 @@ inputs:
     description: "Set the prefix of the version tag. If empty (''), the tag '1.2.3' will be detected."
     required: false
     default: "v"
-  json_config:
+  semver_config:
+    description: "Set the JSON field to include a label for PRs and a semantic versioning type."
+    required: false
+    default: '{"semver_types":[{"type":"major","label":["breaking-change"]},{"type":"minor","label":["feature","enhancement"]},{"type":"patch","label":["bug","hotfix"]}]}'
+  category_config:
     description: "Set the JSON field to include a prefix for commit messages and a heading for release notes."
     required: false
     default: '{"categories":[{"prefix":["revert"],"title":"Reverts"},{"prefix":["refactor"],"title":"Refactoring"},{"prefix":["perf"],"title":"Performance"}]}'
 runs:
   using: "composite"
   steps:
-    - name: Get semver label
-      id: semver_label
+    - name: Detect a version type
+      id: detect_version
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
+        SEMVER_CONFIG: ${{ inputs.semver_config }}
+        GH_REPO: ${{ github.repository }}
+        HEAD_SHA: ${{ github.sha }}
+      run: |
+        chmod +x ${{ github.action_path }}/src/version.sh
+        ${{ github.action_path }}/src/version.sh
+
+    - name: Check the detected version
       shell: bash
       run: |
-        if ${{ contains(github.event.pull_request.labels.*.name, 'semver-major') }}; then
-          SEMVER_LABEL="major"
-        elif ${{ contains(github.event.pull_request.labels.*.name, 'semver-minor') }}; then
-          SEMVER_LABEL="minor"
-        elif ${{ contains(github.event.pull_request.labels.*.name, 'semver-patch') }}; then
-          SEMVER_LABEL="patch"
-        else
-          echo "Failed to get semver-label"
+        version="${{ steps.detect_version.outputs.version }}"
+        if [ -z "$version" ]; then
+          echo "Warning: No semver type detected. Update aborted."
           exit 1
+        else
+          echo "Semver type detected. Starting update."
         fi
 
-        echo "semver_label=$SEMVER_LABEL" >> $GITHUB_OUTPUT
-
-    - name: Execute script
+    - name: Execute main script
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
         DEFAULT_BRANCH: ${{ inputs.default_branch }}
         TAG_PREFIX: ${{ inputs.tag_prefix }}
-        JSON_CONFIG: ${{ inputs.json_config }}
+        CATEGORY_CONFIG: ${{ inputs.category_config }}
+        SEMVER_TYPE: ${{ steps.detect_version.outputs.version }}
         GH_REPO: ${{ github.repository }}
         GH_SHA: ${{ github.sha }}
-        SEMVER_LABEL: ${{ steps.semver_label.outputs.semver_label }}
       run: |
         chmod +x ${{ github.action_path }}/src/main.sh
         ${{ github.action_path }}/src/main.sh
