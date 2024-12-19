@@ -41,6 +41,7 @@ runs:
         ${{ github.action_path }}/src/version.sh
 
     - name: Check the detected version
+      shell: bash
       run: |
         version="${{ steps.detect_version.outputs.version }}"
         if [ -z "$version" ]; then
