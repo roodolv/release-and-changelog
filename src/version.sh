@@ -4,6 +4,7 @@
 # GITHUB_TOKEN: ${{ inputs.github_token }}
 # PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
 # SEMVER_CONFIG: ${{ inputs.semver_config }}
+# CATEGORY_CONFIG: ${{ inputs.category_config }}
 
 # GH_REPO: ${{ github.repository }}
 # HEAD_SHA: ${{ github.sha }}
@@ -12,7 +13,6 @@
 #                    Variables
 ##################################################
 FOUND_LABELS_ARRAY=""
-
 REPO_API="https://api.github.com/repos/$GH_REPO"
 
 ##################################################
