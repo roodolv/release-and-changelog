@@ -3,7 +3,6 @@
 ##################################################
 # GITHUB_TOKEN: ${{ inputs.github_token }}
 # PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
-# DEFAULT_BRANCH: ${{ inputs.default_branch }}
 # TAG_PREFIX: ${{ inputs.tag_prefix }}
 # CATEGORY_CONFIG: ${{ inputs.category_config }}
 
@@ -11,7 +10,9 @@
 
 # GH_REPO: ${{ github.repository }}
 # GH_SHA: ${{ github.sha }}
-# TZ: $TZ
+
+# DEFAULT_BRANCH: ${{ env.DEFAULT_BRANCH }}
+# TZ: ${{ env.TZ }}
 
 ##################################################
 #                    Variables
