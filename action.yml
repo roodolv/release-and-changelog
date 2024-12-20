@@ -8,10 +8,6 @@ inputs:
   pr_token:
     description: "Set a read-only token for pull requests, required when using this action with a private repository."
     required: false
-  default_branch:
-    description: "Specify the default branch name if it differs from 'main'."
-    required: false
-    default: "main"
   tag_prefix:
     description: "Set the prefix of the version tag. If empty (''), the tag '1.2.3' will be detected."
     required: false
@@ -27,6 +23,15 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Get default branch name
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+      run: |
+        default_branch=$(gh api repos/${{ github.repository }} --jq '.default_branch')
+        echo "Default branch is: $default_branch"
+        echo "DEFAULT_BRANCH=$default_branch" >> $GITHUB_ENV
+
     - name: Detect a version type
       id: detect_version
       shell: bash
@@ -56,7 +61,6 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
-        DEFAULT_BRANCH: ${{ inputs.default_branch }}
         TAG_PREFIX: ${{ inputs.tag_prefix }}
         CATEGORY_CONFIG: ${{ inputs.category_config }}
         SEMVER_TYPE: ${{ steps.detect_version.outputs.version }}
