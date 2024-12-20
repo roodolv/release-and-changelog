@@ -1,18 +1,18 @@
 ##################################################
 #                     Inputs
 ##################################################
-# GITHUB_TOKEN="${{ inputs.github_token }}"
+# GITHUB_TOKEN: ${{ inputs.github_token }}
 # PR_TOKEN: ${{ inputs.pr_token || inputs.github_token  }}
-# SEMVER_CONFIG="${{ inputs.semver_config }}"
+# SEMVER_CONFIG: ${{ inputs.semver_config }}
+# CATEGORY_CONFIG: ${{ inputs.category_config }}
 
-# GH_REPO="${{ github.repository }}"
-# HEAD_SHA={{ github.sha }}
+# GH_REPO: ${{ github.repository }}
+# HEAD_SHA: ${{ github.sha }}
 
 ##################################################
 #                    Variables
 ##################################################
 FOUND_LABELS_ARRAY=""
-
 REPO_API="https://api.github.com/repos/$GH_REPO"
 
 ##################################################
@@ -87,14 +87,47 @@ get_labels_between_shas() {
 
   # Terminate this action if there is no label
   if [[ ${#FOUND_LABELS_ARRAY[@]} -eq 0 ]]; then
-    echo "Warning: No target labels found. Update aborted."
-    exit 0
+    echo "Warning: No label found."
+  else
+    echo "Found Labels:"
+    for label in "${FOUND_LABELS_ARRAY[@]}"; do
+      echo "- $label"
+    done
   fi
+}
 
-  echo "Found Labels:"
-  for label in "${FOUND_LABELS_ARRAY[@]}"; do
-    echo "- $label"
-  done
+search_commit_prefixes() {
+  semver_type=""
+
+  # Get commit messages between the previous tag and the HEAD
+  commit_msgs=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    "$REPO_API/compare/$BASE_SHA...$HEAD_SHA" \
+    | jq -r '.commits[] | .commit.message'
+  )
+
+  # Get the number of categories from JSON input
+  categories_count=$(echo "$CATEGORY_CONFIG" | jq '.categories | length')
+
+  while IFS= read -r commit_msg; do
+    [ -z "$commit_msg" ] && continue
+    first_line=$(echo "$commit_msg" | head -n1)
+
+    for ((i=0; i<categories_count; i++)); do
+      prefixes=$(echo "$CATEGORY_CONFIG" | jq -r ".categories[$i].prefix[]")
+
+      for prefix in $prefixes; do
+        if [[ "$first_line" =~ ^${prefix}[\(\:] ]]; then
+          semver_type="patch"
+          break
+        fi
+      done
+      [[ -n "$semver_type" ]] && break # Break if `semver_type` is already set
+    done
+    [[ -n "$semver_type" ]] && break # Break if `semver_type` is already set
+  done <<< "$commit_msgs"
+
+  [[ -z "$semver_type" ]] && semver_type="none"
+  echo "$semver_type"
 }
 
 detect_version() {
@@ -121,7 +154,16 @@ detect_version() {
     [[ -n "$version" ]] && break
   done
 
+  if [[ -z "$version" ]]; then
+    version=$(search_commit_prefixes)
+  fi
+
   echo "Detected version: $version"
+
+  if [ "$version" == "none" ]; then
+    echo "Warning: No semver type found. Update aborted."
+    exit 0
+  fi
 
   # Export the result
   echo "version=$version" >> $GITHUB_OUTPUT
