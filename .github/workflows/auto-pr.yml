@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - "feat/**"
+      - "feature/**"
       - "fix/**"
       - "hotfix/**"
+      - "hot-fix/**"
 
 jobs:
   create-pr:
     runs-on: ubuntu-latest
+    outputs:
+      skip_workflow: ${{ steps.set_skip.outputs.skip }}
     permissions:
       pull-requests: write
       contents: read
@@ -21,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check if PR exists
-        id: check_pr_exists
+        id: set_skip
         run: |
           pr_count=$(gh pr list \
             --repo "${{ github.repository }}" \
@@ -29,19 +33,28 @@ jobs:
             --json title \
             --jq "length")
           if [ $pr_count -gt 0 ]; then
-            echo "Skipping Create PR step"
             echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create PR
-        if: "!steps.check_pr_exists.outputs.skip"
+        if: steps.set_skip.outputs.skip != 'true'
         run: |
           gh pr create \
             --title "$(git log -1 --oneline --pretty=format:'%s')" \
             --body "" \
             --assignee $AUTHOR
 
+      - name: Mark workflow as skipped
+        if: steps.set_skip.outputs.skip == 'true'
+        run: |
+          echo "This workflow was intentionally skipped."
+          exit 0
+
   auto-pr-labeling:
+    needs: create-pr
+    if: needs.create-pr.outputs.skip_workflow != 'true'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
