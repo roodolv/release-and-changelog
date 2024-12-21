@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.3.1](https://github.com/roodolv/release-and-changelog/compare/v1.3.0...v1.3.1) (2024-12-21)
+
+### Bug Fixes
+- **src**: fixed searching commit prefixes ([#14](https://github.com/roodolv/release-and-changelog/pull/14))
+
+- **src**: @github-actions made their first contribution in https://github.com/roodolv/release-and-changelog/pull/14
+
+### Refactoring
+- **src**: removed PREV_FULL_SHA and renamed GH_SHA ([#15](https://github.com/roodolv/release-and-changelog/pull/15)) ([](https://github.com/roodolv/release-and-changelog/commit/))
+
 ## [v1.3.0](https://github.com/roodolv/release-and-changelog/compare/v1.2.1...v1.3.0) (2024-12-20)
 
 ### Features
