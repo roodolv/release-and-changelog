@@ -188,7 +188,7 @@ get_commits_between_tags() {
   # Get commit messages and SHAs between the previous tag and the current HEAD
   commits_and_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
     "$REPO_API/compare/$PREV_TAG...$HEAD_SHA" \
-    | jq -r '.commits[] | .commit.message, .sha')
+    | jq -r '.commits[] | (.commit.message | split("\n") | .[0]), .sha')
 
   # Combine a commit message with a SHA
   results=$(echo "$commits_and_sha" | awk -v repo_url="$REPO_URL" '{
