@@ -1,5 +1,10 @@
 # Changelog
 
+## [v1.3.2](https://github.com/roodolv/release-and-changelog/compare/v1.3.1...v1.3.2) (2024-12-22)
+
+### Hot Fixes
+- **src**: fixed a bug that SHA is not retrieved properly ([#17](https://github.com/roodolv/release-and-changelog/pull/17))
+
 ## [v1.3.1](https://github.com/roodolv/release-and-changelog/compare/v1.3.0...v1.3.1) (2024-12-21)
 
 ### Bug Fixes
