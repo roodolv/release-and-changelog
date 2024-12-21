@@ -20,6 +20,7 @@
 CURRENT_VERSION=""
 NEW_VERSION=""
 PREV_TAG=""
+PREV_FULL_SHA=""
 RELEASE_NOTE_BODY=""
 
 REPO_API="https://api.github.com/repos/$GH_REPO"
@@ -64,9 +65,14 @@ calc_new_version() {
 update_tag_and_sha() {
   NEW_VERSION="${TAG_PREFIX}${NEW_VERSION}"
 
-  # Set the SHA of the initial commit if there is no previous version
   if [ "$CURRENT_VERSION" = "0.0.0" ]; then
-    PREV_TAG="$(git rev-list --max-parents=0 HEAD | cut -c 1-7)"
+    # Set the SHA of the initial commit to the previous tag
+    PREV_FULL_SHA="$(git rev-list --max-parents=0 HEAD)"
+    PREV_TAG="$(echo "$PREV_FULL_SHA" | cut -c 1-7)"
+  else
+    PREV_FULL_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+      "$REPO_API/git/refs/tags/$PREV_TAG" \
+      | jq -r '.object.sha')
   fi
 }
 
@@ -187,7 +193,7 @@ generate_pr_changes() {
 get_commits_between_tags() {
   # Get commit messages and SHAs between the previous tag and the current HEAD
   commits_and_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-    "$REPO_API/compare/$PREV_TAG...$HEAD_SHA" \
+    "$REPO_API/compare/$PREV_FULL_SHA...$HEAD_SHA" \
     | jq -r '.commits[] | .commit.message, .sha')
 
   # Combine a commit message with a SHA
