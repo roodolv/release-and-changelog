@@ -5,8 +5,6 @@
 ### Bug Fixes
 - **src**: fixed searching commit prefixes ([#14](https://github.com/roodolv/release-and-changelog/pull/14))
 
-- **src**: @github-actions made their first contribution in https://github.com/roodolv/release-and-changelog/pull/14
-
 ### Refactoring
 - **src**: removed PREV_FULL_SHA and renamed GH_SHA ([#15](https://github.com/roodolv/release-and-changelog/pull/15)) ([](https://github.com/roodolv/release-and-changelog/commit/))
 
