@@ -8,6 +8,7 @@ on:
       - "fix/**"
       - "hotfix/**"
       - "hot-fix/**"
+      - "patch/**"
 
 jobs:
   create-pr:
@@ -86,6 +87,7 @@ jobs:
 
       - name: Get the latest PR number
         id: pr_number
+        if: ${{ steps.label_name.outputs.label_name != '' }}
         run: |
           for i in {1..3}; do
             sleep 5
