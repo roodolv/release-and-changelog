@@ -82,10 +82,10 @@ get_labels_between_shas() {
     done
   done
 
-  # Set the labels to an array
+  # Store the found labels in an array
   FOUND_LABELS_ARRAY=("${!found_labels[@]}")
 
-  # Terminate this action if there is no label
+  # Output results
   if [[ ${#FOUND_LABELS_ARRAY[@]} -eq 0 ]]; then
     echo "Warning: No label found."
   else
@@ -102,28 +102,25 @@ search_commit_prefixes() {
   # Get commit messages between the previous tag and the HEAD
   commit_msgs=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
     "$REPO_API/compare/$BASE_SHA...$HEAD_SHA" \
-    | jq -r '.commits[] | .commit.message'
+    | jq -r '.commits[] | (.commit.message | split("\n") | .[0])'
   )
 
   # Get the number of categories from JSON input
   categories_count=$(echo "$CATEGORY_CONFIG" | jq '.categories | length')
 
   while IFS= read -r commit_msg; do
-    [ -z "$commit_msg" ] && continue
-    first_line=$(echo "$commit_msg" | head -n1)
+    [[ -z "$commit_msg" ]] && continue
 
     for ((i=0; i<categories_count; i++)); do
       prefixes=$(echo "$CATEGORY_CONFIG" | jq -r ".categories[$i].prefix[]")
 
       for prefix in $prefixes; do
-        if [[ "$first_line" =~ ^${prefix}[\(\:] ]]; then
+        if [[ "$commit_msg" =~ ^${prefix}[\(\:] ]]; then
           semver_type="patch"
-          break
+          break 3
         fi
       done
-      [[ -n "$semver_type" ]] && break # Break if `semver_type` is already set
     done
-    [[ -n "$semver_type" ]] && break # Break if `semver_type` is already set
   done <<< "$commit_msgs"
 
   [[ -z "$semver_type" ]] && semver_type="none"
@@ -146,12 +143,10 @@ detect_version() {
         if [[ "$label" == "$found_label" ]]; then
           version="$type"
           echo "Found match: $label -> version='$version'"
-          break 3 # Exit the whole loops
+          break 3
         fi
       done
     done
-    # Loop ends if `version` is already set
-    [[ -n "$version" ]] && break
   done
 
   if [[ -z "$version" ]]; then
