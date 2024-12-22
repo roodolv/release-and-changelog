@@ -1,21 +1,24 @@
 # Release and Changelog
 
-GitHub Actions for Automated Versioning
+Automated Versioning for [GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow)
 
 ## Features
-- Automatically generates release notes and updates `CHANGELOG.md` if a merged PR has a `semver-XX` label.
-- Calculates and creates a new version tag following [Semantic Versioning](https://semver.org).
-  - Abbreviated, prerelease, and other special kind of tags (e.g. `v1`, `v0.2`, `v3.4.5pre`, `v1.2.3-alpha`, `v0.1.2-beta.1`, and `release-0.1.0` etc) are **all ignored for now**.
-- Generates the release notes with [automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes), and **detected commits**.
-  - Detects commit messages with the specified `prefix` and includes them in sections of `title` in the release notes and CHANGELOG.md.
+- Automatically generates <u>releases</u> and updates <u>CHANGELOG.md</u>.
+- Automatically calculates and creates <u>a new version tag</u> following [Semantic Versioning](https://semver.org).
+  - Abbreviated, prerelease, and other special kind of tags (e.g. `v1`, `v0.2`, `v3.4.5pre`, `v1.2.3-alpha`, `v0.1.2-beta.1`, and `release-0.1.0` etc) are **all ignored**.
+- Automatically detects <u>a version type</u> of SemVer (e.g. `major`, `minor`, `patch`, and `none`) with the user-specified JSON fields.
+- Generates the release notes with [automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes) and **detected commits**.
+  - Detects commit messages with the user-specified `prefix` and includes them in sections of `title` in the release notes and CHANGELOG.md.
   - The `prefix` and `title` can be customized using a JSON field.
 - Retrieves **scopes** from PRs and commits.
     - Supports the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format.
 
+> **NOTE**: This action uses the previous tag and the SHA of HEAD when checking the PRs and commit logs. If there is no previous version tag, it uses the SHA of the first commit instead.
+
 ## Usage
 > **NOTE**: This action should be used with [automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes). It needs `.github/release.yml` on your repository.
 
-> **HINT**: You can create the necessary labels using `setup_labels.sh`.
+Please add `if:` condition as below if you want to call the action only when a merged PR contains a `release` label.
 
 If your repository is **public**:
 ```yaml
@@ -29,6 +32,10 @@ on:
 
 jobs:
   release-and-changelog:
+    # Triggered only when a PR is merged and labeled with `release`
+    if: |
+      github.event.pull_request.merged == true &&
+      (contains(github.event.pull_request.labels.*.name, 'release'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,45 +58,37 @@ If your repository is **private**, please add `pr_token`:
           pr_token: ${{ secrets.PR_TOKEN }}
 ```
 
-Add this to execute the action only when a merged PR contains `semver-XX` labels:
-```yaml
-  release-and-changelog:
-    # Triggered only when PRs are merged and labeled with `semver-XX`
-    if: |
-      github.event.pull_request.merged == true &&
-      (contains(github.event.pull_request.labels.*.name, 'semver-major') ||
-       contains(github.event.pull_request.labels.*.name, 'semver-minor') ||
-       contains(github.event.pull_request.labels.*.name, 'semver-patch'))
-    runs-on: ubuntu-latest
-    ...
-```
+> **HINT**: You can create the necessary labels using `setup_labels.sh`.
 
 ## Inputs
 - `github_token`: Token used to access the GitHub API.
-- `pr_token`: Set a **Read-only** token for pull requests here if you are using this action with a private repository.
-- `default_branch`: Set the default branch name here if it's not `main`.
-- `tag_prefix`: Set the prefix of the version tag. If empty (`''`), the tag `1.2.3` will be detected.
-- `json_config`: Set the **JSON field** to include prefixes for commit messages and headings for release notes. (available in `v1.1.0`+)
+- `pr_token`: Set a **Read-only** token for pull requests here if you are using this action on a private repository.
+- `tag_prefix`: Set the prefix of the version tag. If empty (`''`), the tag like `1.2.3` will be detected and created.
+- `semver_config`: Set the **JSON field** to include <u>semantic versioning types</u> and <u>labels for PRs</u>.
+- `category_config`: Set the **JSON field** to include <u>prefixes</u> for commit messages and <u>titles of headings</u> in release notes.
+
+> **NOTE**: `tag_prefix` can only be set to either `"v"` or `""`(empty string).
 
 | name | required | default |
 | :-- | :-- | :-- |
 |  `github_token`   | true  | - |
 |  `pr_token`       | false | - |
-|  `default_branch` | false | `"main"` |
 |  `tag_prefix`     | false | `"v"` |
-|  `json_config`    | false | `'{"categories":[{"prefix":["revert"],"title":"Reverts"},{"prefix":["refactor"],"title":"Refactoring"},{"prefix":["perf"],"title":"Performance"}]}'` |
+|  `semver_config`    | false | `'{"semver_types":[{"type":"major","label":["breaking-change"]},{"type":"minor","label":["feature","enhancement"]},{"type":"patch","label":["bug","hotfix"]}]}'` |
+|  `category_config`    | false | `'{"categories":[{"prefix":["revert"],"title":"Reverts"},{"prefix":["refactor"],"title":"Refactoring"},{"prefix":["perf"],"title":"Performance"}]}'` |
 
-### About `json_config`
-> **NOTE**: This feature is available from version `v1.1.0` onward.
+### About JSON configs
 
-You can specify `prefix` for commit messages and `title` for release notes freely, with `json_config` variable.
+Here is the example of JSON settings. You can freely customize them.
+
+When you setup YAML like this,
 ```yaml
       - uses: roodolv/release-and-changelog@v1
         env:
           TZ: "Asia/Tokyo"
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          json_config: |
+          category_config: |
             {
               "categories": [
                 {
@@ -97,15 +96,34 @@ You can specify `prefix` for commit messages and `title` for release notes freel
                   "title": "Refactoring"
                 },
                 {
-                  "prefix": ["perform"],
-                  "title": "Performance"
-                },
-                {
-                  "prefix": ["docs", "documentation"],
+                  "prefix": ["docs", "document"],
                   "title": "Docs"
                 }
               ]
             }
+```
+
+and if your Git log is like this,
+```bash
+$ git log --pretty=oneline --abbrev-commit
+
+abcdef0 document(readme): bar bar bar
+0123456 refactor(src): foo foo foo (#3)
+ccccccc (tag: v0.1.0) chore(release): v0.1.0
+bbbbbbb feat(other): fugafuga (#2)
+aaaaaaa fix(src): hogehoge (#1)
+0000000 (tag: v0.0.1) chore(release): v0.0.1
+```
+
+this action outputs the following release notes:
+```md
+## [v0.1.1](https://github.com/USER/REPO/compare/v0.1.0...v0.1.1) (2024-12-22)
+
+### Refactoring
+- **src**: foo foo foo ([#3](https://github.com/USER/REPO/pull/3)) ([0123456](https://github.com/USER/REPO/commit/012345678900000000000000000000000000000))
+
+### Docs
+- **readme**: bar bar bar ([abcdef0](https://github.com/USER/REPO/commit/abcdef000000000000000000000000000000000))
 ```
 
 ## Examples
@@ -162,7 +180,7 @@ $ git log --pretty=oneline --abbrev-commit
 
 PR details:
 
-> **NOTE**: This PR has branch but its name is `chore/`, so the PR itself doesn't trigger this action.
+> **NOTE**: This PR didn't have labels like `bug` or `enhancement`, so the PR itself wouldn't be included in automatically generated release notes. However, the PR included the commit that has a user-specified prefix (`revert`), so the commit would be included in releases notes.
 
 ```bash
 $ gh pr view 7
