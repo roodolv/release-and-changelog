@@ -1,5 +1,10 @@
 # Changelog
 
+## [v1.3.3](https://github.com/roodolv/release-and-changelog/compare/v1.3.2...v1.3.3) (2024-12-22)
+
+### Refactoring
+- **src**: chore on src/version.sh ([#18](https://github.com/roodolv/release-and-changelog/pull/18)) ([567bad4](https://github.com/roodolv/release-and-changelog/commit/567bad46464bc764bafb823511aceaa1db5b6cc8))
+
 ## [v1.3.2](https://github.com/roodolv/release-and-changelog/compare/v1.3.1...v1.3.2) (2024-12-22)
 
 ### Hot Fixes
