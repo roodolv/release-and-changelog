@@ -1,5 +1,10 @@
 # Changelog
 
+## [v1.3.4](https://github.com/roodolv/release-and-changelog/compare/v1.3.3...v1.3.4) (2025-08-26)
+
+### Bug Fixes
+- **src**: CHANGELOG now skips contributor rows ([#20](https://github.com/roodolv/release-and-changelog/pull/20))
+
 ## [v1.3.3](https://github.com/roodolv/release-and-changelog/compare/v1.3.2...v1.3.3) (2024-12-22)
 
 ### Refactoring
