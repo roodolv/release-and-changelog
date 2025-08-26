@@ -157,6 +157,10 @@ generate_pr_changes() {
       return
     fi
 
+    if [[ "$line" == *"made their first contribution in"* ]]; then
+      return
+    fi
+
     if [[ "$line" =~ https://github\.com/[^/]+/[^/]+/pull/[0-9]+ ]]; then
       process_pr_line "$line"
       return
