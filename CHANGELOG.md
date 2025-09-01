@@ -1,5 +1,10 @@
 # Changelog
 
+## [v1.4.0](https://github.com/roodolv/release-and-changelog/compare/v1.3.4...v1.4.0) (2025-09-01)
+
+### Features
+- **metadata**: added improvement label to action.yml ([#21](https://github.com/roodolv/release-and-changelog/pull/21))
+
 ## [v1.3.4](https://github.com/roodolv/release-and-changelog/compare/v1.3.3...v1.3.4) (2025-08-26)
 
 ### Bug Fixes
