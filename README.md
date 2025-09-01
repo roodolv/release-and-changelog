@@ -74,7 +74,7 @@ If your repository is **private**, please add `pr_token`:
 |  `github_token`   | true  | - |
 |  `pr_token`       | false | - |
 |  `tag_prefix`     | false | `"v"` |
-|  `semver_config`    | false | `'{"semver_types":[{"type":"major","label":["breaking-change"]},{"type":"minor","label":["feature","enhancement"]},{"type":"patch","label":["bug","hotfix"]}]}'` |
+|  `semver_config`    | false | `'{"semver_types":[{"type":"major","label":["breaking-change"]},{"type":"minor","label":["feature","enhancement"]},{"type":"patch","label":["improvement","bug","hotfix"]}]}'` |
 |  `category_config`    | false | `'{"categories":[{"prefix":["revert"],"title":"Reverts"},{"prefix":["refactor"],"title":"Refactoring"},{"prefix":["perf"],"title":"Performance"}]}'` |
 
 ### About JSON configs
