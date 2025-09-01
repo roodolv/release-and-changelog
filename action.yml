@@ -15,7 +15,7 @@ inputs:
   semver_config:
     description: "Set the JSON field to include a label for PRs and a semantic versioning type."
     required: false
-    default: '{"semver_types":[{"type":"major","label":["breaking-change"]},{"type":"minor","label":["feature","enhancement"]},{"type":"patch","label":["bug","hotfix"]}]}'
+    default: '{"semver_types":[{"type":"major","label":["breaking-change"]},{"type":"minor","label":["feature","enhancement"]},{"type":"patch","label":["improvement","bug","hotfix"]}]}'
   category_config:
     description: "Set the JSON field to include a prefix for commit messages and a heading for release notes."
     required: false
